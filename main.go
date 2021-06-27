@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -114,6 +115,9 @@ import (
 // 	}
 // }
 
+var gStockFullName string
+var gPriceStr string
+
 func main() {
 
 	dir, _ := ioutil.TempDir("", "chromedp-example")
@@ -194,6 +198,8 @@ func main() {
 
 	fmt.Println(stockFullName)
 
+	gStockFullName = stockFullName
+
 	stockDetailArr := strings.Split(res3, "\n")
 
 	// last price
@@ -203,6 +209,8 @@ func main() {
 
 	price, _ := strconv.ParseFloat(priceStr, 64)
 	fmt.Println(price)
+
+	gPriceStr = priceStr
 	//-------------------
 	changeRaw := stockDetailArr[1]
 	changePerStartIndex := strings.IndexByte(changeRaw, '(') + 1
@@ -233,6 +241,22 @@ func main() {
 	volumeStartIndex := strings.LastIndex(volumeRaw, " ") + 1
 	volumeStr := volumeRaw[volumeStartIndex:]
 	fmt.Println(volumeStr)
+
+	//----------------------------------
+
+	http.HandleFunc("/", indexHandler)
+
+	// [START setting_port]
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+		log.Printf("Defaulting to port %s", port)
+	}
+	log.Printf("Listening on port %s", port)
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
+		log.Fatal(err)
+	}
+
 	// //------ ORDS -----------------------------
 	// ordsRaw_1 := temp[0]
 
@@ -274,6 +298,14 @@ func main() {
 	// d1 := []byte(res2)
 	// err = ioutil.WriteFile("./dat1.txt", d1, 0644)
 	// check(err)
+}
+
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+	fmt.Fprint(w, gStockFullName, gPriceStr)
 }
 
 func check(e error) {
